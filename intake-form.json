@@ -1,0 +1,46 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "GHL Voice AI Inbound Agent — Business Intake Form",
+  "description": "Fill out all fields before running system-prompt-generator.js. Push detailed FAQ/service content to knowledge-base-content.md — keep system prompt inputs lean.",
+  "business_name": "",
+  "agent_name": "",
+  "industry": "",
+  "services": [
+    {
+      "name": "",
+      "description": "",
+      "typical_duration_minutes": 0
+    }
+  ],
+  "pricing_policy": "We provide free estimates on-site. Pricing varies by job scope and will be quoted by our technician.",
+  "service_areas": {
+    "cities": [],
+    "zip_codes": []
+  },
+  "operating_hours": {
+    "monday":    { "open": "08:00", "close": "18:00" },
+    "tuesday":   { "open": "08:00", "close": "18:00" },
+    "wednesday": { "open": "08:00", "close": "18:00" },
+    "thursday":  { "open": "08:00", "close": "18:00" },
+    "friday":    { "open": "08:00", "close": "18:00" },
+    "saturday":  { "open": "09:00", "close": "14:00" },
+    "sunday":    { "open": "closed", "close": "closed" }
+  },
+  "faqs": [
+    {
+      "question": "",
+      "answer": ""
+    }
+  ],
+  "emergency_policy": "For gas leaks or flooding, instruct caller to evacuate and call 911. For urgent (non-life-threatening) issues after hours, transfer to on-call technician.",
+  "technician_email": "",
+  "technician_transfer_number": "",
+  "brand_voice": "friendly, professional, and efficient",
+  "calendar_name": "",
+  "appointment_duration_minutes": 60,
+  "timezone": "America/Chicago",
+  "ghl_location_id": "",
+  "phone_number_country": "US",
+  "warranty_info": "",
+  "maintenance_plan_info": ""
+}

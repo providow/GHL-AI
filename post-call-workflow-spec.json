@@ -1,0 +1,59 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "description": "GHL post-call automation workflow specification. Use this as a reference when building the workflow in GHL > Automations. All template variables use GHL's native custom value syntax.",
+  "workflow_name": "AI Voice - Post Booking Automation",
+  "status": "active",
+  "trigger": {
+    "type": "Appointment Booked by AI Agent",
+    "filters": [
+      {
+        "field": "agent_id",
+        "operator": "equals",
+        "value": "{{AGENT_ID_FROM_PHASE_1}}",
+        "note": "Scope this trigger to your specific agent to avoid firing on manual or other-source bookings"
+      }
+    ]
+  },
+  "actions": [
+    {
+      "sequence": 1,
+      "type": "SMS",
+      "to": "contact",
+      "from": "{{sub_account_phone_number}}",
+      "template": "Hi {{contact.first_name}}, your appointment with {{business_name}} is confirmed for {{appointment.start_time_formatted}}. Our technician will arrive at {{appointment.address}}. Questions? Call us at {{main_phone}}.",
+      "warnings": [
+        "A2P 10DLC registration MUST be complete for the sending number before this action will work.",
+        "Non-approved numbers fail silently — no error is shown in GHL, but the SMS is never delivered.",
+        "Verify registration status at Sub-Account > Settings > Phone Numbers > [Number] > Compliance"
+      ]
+    },
+    {
+      "sequence": 2,
+      "type": "Email",
+      "to": "{{technician_email}}",
+      "from": "{{sub_account_email}}",
+      "subject": "New AI Booking: {{contact.full_name}} — {{appointment.start_time_formatted}}",
+      "body": "New appointment booked via AI agent.\n\nContact: {{contact.full_name}}\nPhone: {{contact.phone}}\nEmail: {{contact.email}}\nService Address: {{appointment.address}}\nService Requested: {{appointment.notes}}\nDate/Time: {{appointment.start_time_formatted}}\n\nLogin to GHL to view or modify:\nhttps://app.gohighlevel.com",
+      "notes": "Replace {{technician_email}} with a GHL custom field if multiple technicians are used and routing logic is needed."
+    },
+    {
+      "sequence": 3,
+      "type": "Tag",
+      "action": "add",
+      "tag": "Booked by AI",
+      "notes": "Enables filtering AI-sourced contacts in GHL Contacts view and Smart Lists for reporting."
+    },
+    {
+      "sequence": 4,
+      "type": "UpdateContactField",
+      "field": "last_ai_booking_date",
+      "value": "{{current_date}}",
+      "notes": "Optional. Requires a custom field named 'last_ai_booking_date' to exist in the sub-account. Create it at Sub-Account > Settings > Custom Fields."
+    }
+  ],
+  "notes": {
+    "a2p_warning": "Do not enable the SMS action (sequence 1) until A2P 10DLC registration is approved for the sending number. Build the workflow in full, then toggle the SMS action off until approval is confirmed.",
+    "multi_technician": "For multi-technician setups, replace the static technician_email with a GHL workflow branch (If/Else) that routes based on service type or geographic zone custom fields.",
+    "snapshot_note": "When exporting a Snapshot for multi-client reuse, workflow templates retain structure but {{placeholder}} values must be updated per client in the new sub-account."
+  }
+}
