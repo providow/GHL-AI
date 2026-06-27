@@ -102,6 +102,19 @@ const server = http.createServer((req, res) => {
     return;
   }
 
+  // ── Guide PDF page ────────────────────────────────────────────────────────────
+  if (method === 'GET' && url.pathname.startsWith('/guide/')) {
+    const slug = url.pathname.replace('/guide/', '').replace(/\/$/, '');
+    const guidePath = artifacts(slug).setupGuide;
+    const intakefile = intakePath(slug);
+    if (!fs.existsSync(guidePath)) { res.writeHead(404); res.end('Guide not found. Run generate first.'); return; }
+    const md = fs.readFileSync(guidePath, 'utf8');
+    const b  = fs.existsSync(intakefile) ? readJSON(intakefile) : {};
+    res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+    res.end(getGuideHTML(md, b.business_name || slug));
+    return;
+  }
+
   // ── API: save & generate ─────────────────────────────────────────────────────
   if (method === 'POST' && url.pathname === '/api/generate') {
     let body = '';
@@ -147,6 +160,250 @@ const server = http.createServer((req, res) => {
 
   res.writeHead(404); res.end('Not found');
 });
+
+// ── Markdown → HTML renderer (no deps) ───────────────────────────────────────
+function mdToHtml(md) {
+  const esc = (s) => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+
+  const inlineFormat = (s) => s
+    .replace(/`([^`]+)`/g, '<code>$1</code>')
+    .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*([^*]+)\*/g, '<em>$1</em>');
+
+  const lines  = md.split('\n');
+  const out    = [];
+  let inTable  = false;
+  let inList   = false;
+  let inChecks = false;
+  let inBlock  = false;
+  let blockLines = [];
+
+  const flushTable = () => { if (inTable) { out.push('</tbody></table>'); inTable = false; } };
+  const flushList  = () => {
+    if (inList)   { out.push('</ul>'); inList = false; }
+    if (inChecks) { out.push('</ul>'); inChecks = false; }
+  };
+  const flushBlock = () => {
+    if (inBlock) {
+      out.push('<pre><code>' + esc(blockLines.join('\n')) + '</code></pre>');
+      inBlock = false; blockLines = [];
+    }
+  };
+
+  for (let i = 0; i < lines.length; i++) {
+    const raw = lines[i];
+    const line = raw.trimEnd();
+
+    // code blocks
+    if (line.startsWith('```')) {
+      if (!inBlock) { flushTable(); flushList(); inBlock = true; }
+      else { flushBlock(); }
+      continue;
+    }
+    if (inBlock) { blockLines.push(raw); continue; }
+
+    // blockquotes
+    if (line.startsWith('> ') || line === '>') {
+      flushTable(); flushList();
+      out.push('<blockquote>' + inlineFormat(esc(line.replace(/^>\s?/, ''))) + '</blockquote>');
+      continue;
+    }
+
+    // headings
+    const h4 = line.match(/^####\s+(.*)/);
+    const h3 = line.match(/^###\s+(.*)/);
+    const h2 = line.match(/^##\s+(.*)/);
+    const h1 = line.match(/^#\s+(.*)/);
+    if (h4) { flushTable(); flushList(); out.push('<h4>' + inlineFormat(esc(h4[1])) + '</h4>'); continue; }
+    if (h3) { flushTable(); flushList(); out.push('<h3>' + inlineFormat(esc(h3[1])) + '</h3>'); continue; }
+    if (h2) { flushTable(); flushList(); out.push('<h2>' + inlineFormat(esc(h2[1])) + '</h2>'); continue; }
+    if (h1) { flushTable(); flushList(); out.push('<h1>' + inlineFormat(esc(h1[1])) + '</h1>'); continue; }
+
+    // hr
+    if (line.match(/^---+$/)) { flushTable(); flushList(); out.push('<hr>'); continue; }
+
+    // tables
+    if (line.startsWith('|')) {
+      flushList();
+      const cells = line.split('|').slice(1, -1).map(c => c.trim());
+      if (line.match(/^\|[\s\-|]+\|$/)) { out.push('</thead><tbody>'); continue; }
+      if (!inTable) {
+        out.push('<table><thead>');
+        out.push('<tr>' + cells.map(c => '<th>' + inlineFormat(esc(c)) + '</th>').join('') + '</tr>');
+        inTable = true;
+      } else {
+        out.push('<tr>' + cells.map(c => '<td>' + inlineFormat(esc(c)) + '</td>').join('') + '</tr>');
+      }
+      continue;
+    } else { flushTable(); }
+
+    // checkbox list items
+    const chk = line.match(/^- \[([ x])\] (.*)/);
+    if (chk) {
+      if (!inChecks) { flushList(); out.push('<ul class="checklist">'); inChecks = true; }
+      const checked = chk[1] === 'x' ? ' checked' : '';
+      out.push('<li><input type="checkbox" disabled' + checked + '> ' + inlineFormat(esc(chk[2])) + '</li>');
+      continue;
+    }
+
+    // numbered list
+    const num = line.match(/^(\d+)\. (.*)/);
+    if (num) {
+      if (!inList || out[out.length-1] === '</ul>') {
+        flushList(); out.push('<ol' + (num[1] !== '1' ? ' start="'+num[1]+'"' : '') + '>'); inList = true;
+      }
+      out.push('<li>' + inlineFormat(esc(num[2])) + '</li>');
+      continue;
+    }
+
+    // bullet list (including indented)
+    const bul = line.match(/^(\s*)[-*] (.*)/);
+    if (bul) {
+      if (!inList) { flushTable(); out.push('<ul>'); inList = true; }
+      const indent = bul[1].length > 0 ? ' class="sub"' : '';
+      out.push('<li' + indent + '>' + inlineFormat(esc(bul[2])) + '</li>');
+      continue;
+    }
+
+    // flush list on non-list line
+    flushList();
+
+    // blank line
+    if (line.trim() === '') { out.push('<div class="spacer"></div>'); continue; }
+
+    // italic line (em)
+    if (line.startsWith('*') && line.endsWith('*')) {
+      out.push('<p class="meta">' + inlineFormat(esc(line)) + '</p>'); continue;
+    }
+
+    // paragraph
+    out.push('<p>' + inlineFormat(esc(line)) + '</p>');
+  }
+  flushTable(); flushList(); flushBlock();
+  return out.join('\n');
+}
+
+// ── Guide PDF page ────────────────────────────────────────────────────────────
+function getGuideHTML(md, title) {
+  const body = mdToHtml(md);
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>${title} — GHL Fast Setup Guide</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Segoe UI', Arial, sans-serif;
+    font-size: 13px;
+    line-height: 1.65;
+    color: #1a1a2e;
+    background: #f4f6fb;
+  }
+
+  .toolbar {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+    background: #1a1d2e; border-bottom: 2px solid #2563eb;
+    padding: 12px 32px; display: flex; align-items: center; justify-content: space-between;
+  }
+  .toolbar-title { color: #fff; font-size: 14px; font-weight: 600; }
+  .toolbar-sub   { color: #64748b; font-size: 12px; margin-top: 2px; }
+  .btn-pdf {
+    background: #2563eb; color: #fff; border: none; border-radius: 8px;
+    padding: 10px 24px; font-size: 14px; font-weight: 600; cursor: pointer;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .btn-pdf:hover { background: #1d4ed8; }
+  .btn-pdf svg  { width: 16px; height: 16px; fill: #fff; }
+
+  .page {
+    max-width: 820px; margin: 80px auto 60px;
+    background: #fff; border-radius: 12px;
+    box-shadow: 0 4px 24px rgba(0,0,0,.08);
+    padding: 56px 64px;
+  }
+
+  h1 { font-size: 22px; color: #1e3a5f; border-bottom: 3px solid #2563eb; padding-bottom: 10px; margin-bottom: 6px; }
+  h2 { font-size: 16px; color: #1e3a5f; background: #eef3fb; border-left: 4px solid #2563eb; padding: 8px 14px; border-radius: 0 6px 6px 0; margin: 28px 0 14px; }
+  h3 { font-size: 13px; font-weight: 700; color: #2563eb; text-transform: uppercase; letter-spacing: .05em; margin: 20px 0 10px; }
+  h4 { font-size: 13px; font-weight: 600; color: #374151; margin: 14px 0 6px; }
+  p  { margin-bottom: 8px; color: #374151; }
+  p.meta { font-style: italic; color: #94a3b8; font-size: 11px; margin-top: 16px; }
+
+  strong { color: #1e3a5f; }
+  code   { background: #f1f5f9; color: #0f4c81; border-radius: 4px; padding: 1px 5px; font-family: 'Consolas', monospace; font-size: 12px; }
+  pre    { background: #f1f5f9; border: 1px solid #e2e8f0; border-radius: 8px; padding: 14px 16px; margin: 10px 0; overflow-x: auto; }
+  pre code { background: none; padding: 0; color: #1e3a5f; }
+
+  hr { border: none; border-top: 1px solid #e2e8f0; margin: 24px 0; }
+  .spacer { height: 6px; }
+
+  blockquote {
+    background: #fff8e1; border-left: 4px solid #f59e0b;
+    border-radius: 0 6px 6px 0; padding: 10px 14px; margin: 12px 0;
+    color: #78350f; font-size: 12px;
+  }
+  blockquote strong { color: #78350f; }
+
+  table { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 12px; }
+  th { background: #1e3a5f; color: #fff; padding: 8px 12px; text-align: left; font-weight: 600; }
+  td { padding: 7px 12px; border-bottom: 1px solid #e2e8f0; }
+  tr:nth-child(even) td { background: #f8fafc; }
+  tr:hover td { background: #eef3fb; }
+
+  ol, ul { padding-left: 22px; margin: 8px 0 10px; }
+  li { margin-bottom: 5px; color: #374151; }
+  li.sub { margin-left: 16px; }
+
+  ul.checklist { list-style: none; padding-left: 4px; }
+  ul.checklist li { display: flex; align-items: flex-start; gap: 8px; padding: 4px 0; border-bottom: 1px solid #f1f5f9; }
+  ul.checklist input[type=checkbox] { margin-top: 3px; accent-color: #2563eb; transform: scale(1.2); flex-shrink: 0; }
+
+  /* ── Print styles ── */
+  @media print {
+    body { background: #fff; font-size: 11px; }
+    .toolbar { display: none !important; }
+    .page { margin: 0; box-shadow: none; border-radius: 0; padding: 28px 36px; max-width: 100%; }
+    h1 { font-size: 18px; }
+    h2 { font-size: 13px; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    th { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    blockquote { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    a { color: inherit; text-decoration: none; }
+    pre { white-space: pre-wrap; }
+    @page { margin: 16mm 14mm; size: A4; }
+    h2, h3 { page-break-after: avoid; }
+    table, blockquote { page-break-inside: avoid; }
+  }
+</style>
+</head>
+<body>
+
+<div class="toolbar">
+  <div>
+    <div class="toolbar-title">${title} — Fast Setup Guide</div>
+    <div class="toolbar-sub">GHL Voice AI Inbound Agent</div>
+  </div>
+  <button class="btn-pdf" onclick="window.print()">
+    <svg viewBox="0 0 24 24"><path d="M19 8H5c-1.66 0-3 1.34-3 3v6h4v4h12v-4h4v-6c0-1.66-1.34-3-3-3zm-3 11H8v-5h8v5zm3-7c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1zm-1-9H6v4h12V3z"/></svg>
+    Download PDF
+  </button>
+</div>
+
+<div class="page">
+  ${body}
+</div>
+
+<script>
+// Auto-trigger print if ?print=1 is in the URL (for automation)
+if (new URLSearchParams(location.search).get('print') === '1') {
+  window.addEventListener('load', () => setTimeout(() => window.print(), 500));
+}
+</script>
+</body>
+</html>`;
+}
 
 // ── HTML UI ───────────────────────────────────────────────────────────────────
 function getHTML() {
@@ -582,10 +839,14 @@ function renderResults(slug, data) {
               \${wordWarn}
               \${!ok ? \`<span class="error-msg">\${err}</span>\` : ''}
             </div>
-            \${ok ? \`<div style="display:flex;gap:8px">
-              <button class="btn-copy" onclick="togglePreview('\${slug}','\${item.type}',this)">View</button>
-              <button class="btn-copy" onclick="copyArtifact('\${slug}','\${item.type}')">Copy</button>
-            </div>\` : ''}
+            \${ok ? (item.type === 'workflow'
+              ? \`<div style="display:flex;gap:8px">
+                  <a class="btn-copy" href="/guide/\${slug}" target="_blank" style="text-decoration:none">Open Guide ↗</a>
+                </div>\`
+              : \`<div style="display:flex;gap:8px">
+                  <button class="btn-copy" onclick="togglePreview('\${slug}','\${item.type}',this)">View</button>
+                  <button class="btn-copy" onclick="copyArtifact('\${slug}','\${item.type}')">Copy</button>
+                </div>\`) : ''}
           </div>
           <div class="artifact-preview" id="preview-\${item.type}"></div>
         \`;
