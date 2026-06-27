@@ -632,7 +632,17 @@ init();
 </html>`;
 }
 
-server.listen(PORT, () => {
-  console.log(`\nGHL Voice AI Setup UI running at http://localhost:${PORT}\n`);
+server.listen(PORT, '127.0.0.1', () => {
+  console.log(`\nGHL Voice AI Setup UI running at http://127.0.0.1:${PORT}`);
+  console.log(`Also try: http://localhost:${PORT}\n`);
   console.log('Press Ctrl+C to stop.\n');
+});
+
+server.on('error', (e) => {
+  if (e.code === 'EADDRINUSE') {
+    console.error(`\nPort ${PORT} is already in use. Kill the other process or change PORT in server.js.\n`);
+  } else {
+    console.error('\nServer error:', e.message, '\n');
+  }
+  process.exit(1);
 });
