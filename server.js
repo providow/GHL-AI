@@ -632,10 +632,15 @@ init();
 </html>`;
 }
 
+process.stdout.write('Starting server...\n');
+
 server.listen(PORT, '127.0.0.1', () => {
-  console.log(`\nGHL Voice AI Setup UI running at http://127.0.0.1:${PORT}`);
-  console.log(`Also try: http://localhost:${PORT}\n`);
-  console.log('Press Ctrl+C to stop.\n');
+  process.stdout.write('\n====================================\n');
+  process.stdout.write('GHL Voice AI Setup UI is RUNNING\n');
+  process.stdout.write('Open this in your browser:\n');
+  process.stdout.write('http://127.0.0.1:' + PORT + '\n');
+  process.stdout.write('====================================\n');
+  process.stdout.write('Press Ctrl+C to stop.\n\n');
 });
 
 server.on('error', (e) => {
