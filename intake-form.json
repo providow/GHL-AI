@@ -33,6 +33,11 @@
     }
   ],
   "emergency_policy": "For gas leaks or flooding, instruct caller to evacuate and call 911. For urgent (non-life-threatening) issues after hours, transfer to on-call technician.",
+  "main_phone": "",
+  "website_url": "",
+  "year_founded": "",
+  "license_number": "",
+  "payment_methods": "cash, credit card, check",
   "technician_email": "",
   "technician_transfer_number": "",
   "brand_voice": "friendly, professional, and efficient",

@@ -1,0 +1,68 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "description": "GHL post-call automation workflow specification. Build this in GHL > Automations, then link it under Agent Goals > After the Call.",
+  "workflow_name": "Appointment Book by AI",
+  "ghl_workflow_linking": "After publishing, link at: AI Agents > Voice AI > Inbound > [Agent] > Agent Goals > After the Call > Trigger Workflow when call is completed",
+  "status": "active",
+  "trigger": {
+    "type": "Appointment Status",
+    "ghl_trigger_name": "Appointment Status",
+    "filters": [
+      {
+        "field": "appointment_status",
+        "operator": "equals",
+        "value": "New",
+        "note": "Fires when a net-new appointment is created — covers AI agent bookings."
+      }
+    ]
+  },
+  "actions": [
+    {
+      "sequence": 1,
+      "type": "SMS",
+      "action_name": "Send Confirmation SMS",
+      "to": "contact",
+      "from": "(256) 555-0100",
+      "template": "Hi {{contact.first_name}}, your appointment with Acme HVAC United is confirmed for {{appointment.start_time_formatted}}. Our technician will arrive at {{appointment.address}}. Questions? Call us at (256) 555-0100.",
+      "warnings": [
+        "A2P 10DLC registration MUST be complete for the sending number before this action will work.",
+        "Non-approved numbers fail silently — no error in GHL, no delivery to the contact.",
+        "Verify at: Sub-Account > Settings > Phone Numbers > [Number] > Compliance"
+      ]
+    },
+    {
+      "sequence": 2,
+      "type": "Email",
+      "action_name": "Send Notification to Technician",
+      "to": "tech@acmehvacunited.com",
+      "from_name": "Acme HVAC United Appointments",
+      "from_email": "service@acmehvacunited.com",
+      "subject": "New Appointment Received",
+      "body": "New appointment booked via AI agent.\n\nContact: {{contact.full_name}}\nPhone: {{contact.phone}}\nEmail: {{contact.email}}\nService Address: {{appointment.address}}\nService Requested: {{appointment.notes}}\nDate/Time: {{appointment.start_time_formatted}}\n\nLogin to GHL to view or modify:\nhttps://app.gohighlevel.com",
+      "notes": "For multi-technician setups, replace the static email with an If/Else branch routing by service type or zone."
+    },
+    {
+      "sequence": 3,
+      "type": "Tag",
+      "action_name": "Add Tag: Book by AI",
+      "action": "add",
+      "tag": "Book by AI",
+      "notes": "Enables filtering AI-sourced contacts in GHL Contacts view and Smart Lists."
+    },
+    {
+      "sequence": 4,
+      "type": "UpdateContactField",
+      "action_name": "Set Last AI Booking Date",
+      "field": "last_ai_booking_date",
+      "value": "{{current_date}}",
+      "notes": "Optional. Requires a custom field named \"last_ai_booking_date\". Create at Sub-Account > Settings > Custom Fields."
+    }
+  ],
+  "notes": {
+    "a2p_warning": "Do not enable the SMS action until A2P 10DLC is approved. Build and publish the workflow, then toggle SMS off until approved.",
+    "multi_technician": "Replace static technician_email with an If/Else branch routing by service type or geographic zone.",
+    "snapshot_note": "Workflow structure is preserved in GHL Snapshots, but email addresses and phone numbers must be updated per client after applying the Snapshot.",
+    "business": "Acme HVAC United",
+    "generated_at": "2026-06-27T01:31:45.593Z"
+  }
+}

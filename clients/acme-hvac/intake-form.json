@@ -1,0 +1,51 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "GHL Voice AI Inbound Agent — Business Intake Form",
+  "description": "Fill out all fields before running system-prompt-generator.js. Push detailed FAQ/service content to knowledge-base-content.md — keep system prompt inputs lean.",
+  "business_name": "Acme HVAC United",
+  "agent_name": "Hannah",
+  "industry": "HVAC",
+  "services": [
+    { "name": "AC Repair", "description": "Diagnosis and repair of central air conditioning systems.", "typical_duration_minutes": 90 },
+    { "name": "AC Installation", "description": "Full installation of new central AC units.", "typical_duration_minutes": 240 },
+    { "name": "Furnace Repair", "description": "Diagnosis and repair of gas and electric furnaces.", "typical_duration_minutes": 90 },
+    { "name": "Duct Cleaning", "description": "Professional cleaning of HVAC ductwork.", "typical_duration_minutes": 120 },
+    { "name": "Tune-Up", "description": "Seasonal maintenance and system tune-up.", "typical_duration_minutes": 60 }
+  ],
+  "pricing_policy": "We provide free on-site estimates. Pricing varies by job scope and will be quoted by our technician after assessment.",
+  "service_areas": {
+    "cities": ["Huntsville", "Madison", "Decatur", "Athens"],
+    "zip_codes": ["35801", "35802", "35803", "35810", "35758", "35611"]
+  },
+  "operating_hours": {
+    "monday":    { "open": "08:00", "close": "18:00" },
+    "tuesday":   { "open": "08:00", "close": "18:00" },
+    "wednesday": { "open": "08:00", "close": "18:00" },
+    "thursday":  { "open": "08:00", "close": "18:00" },
+    "friday":    { "open": "08:00", "close": "18:00" },
+    "saturday":  { "open": "09:00", "close": "14:00" },
+    "sunday":    { "open": "closed", "close": "closed" }
+  },
+  "faqs": [
+    { "question": "How quickly can you come out?", "answer": "We typically schedule within 1-2 business days. Same-day service is available for emergencies." },
+    { "question": "Do you offer emergency service?", "answer": "Yes. For no cooling or no heating situations, call us and we will prioritize same-day scheduling." },
+    { "question": "What brands do you service?", "answer": "We service all major HVAC brands including Carrier, Trane, Lennox, Rheem, and more." },
+    { "question": "Do you offer a warranty on repairs?", "answer": "Yes. All repairs come with a 90-day labor warranty and we honor manufacturer parts warranties." }
+  ],
+  "emergency_policy": "For gas leaks, instruct the caller to leave the building immediately and call 911. Do not schedule an appointment. For no cooling or no heating situations, flag as urgent and offer same-day scheduling if available. Transfer to on-call technician for after-hours emergencies.",
+  "main_phone": "(256) 555-0100",
+  "website_url": "https://acmehvacunited.com",
+  "year_founded": "2012",
+  "license_number": "HVAC-AL-00123",
+  "payment_methods": "cash, credit card, check, financing available",
+  "technician_email": "tech@acmehvacunited.com",
+  "technician_transfer_number": "+12565550101",
+  "brand_voice": "friendly, professional, and efficient",
+  "calendar_name": "Acme HVAC Appointments",
+  "appointment_duration_minutes": 90,
+  "timezone": "America/Chicago",
+  "ghl_location_id": "",
+  "phone_number_country": "US",
+  "warranty_info": "All labor comes with a 90-day warranty. Parts are covered under manufacturer warranty.",
+  "maintenance_plan_info": "Our annual maintenance plan covers two tune-ups per year (spring and fall) plus priority scheduling and a 10% discount on all repairs. $149/year per system."
+}
