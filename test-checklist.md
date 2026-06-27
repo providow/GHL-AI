@@ -1,8 +1,9 @@
 # End-to-End Test Checklist
 ## GHL Voice AI Inbound Agent — Web Call Validation
 
-> **Tool:** Use GHL Web Call (`Sub-Account > AI Agents > Voice AI > Inbound > [Agent] > Test`) for all tests.
+> **Tool:** Use GHL Web Call — `Sub-Account > AI Agents > Voice AI > Inbound > [Agent] > Agent Goals > Test > Start Web Call`
 > Never test on a live phone number until all Web Call tests pass.
+> **Phone number testing:** If you purchased a US phone number and assigned it to the agent, you can test by calling that number directly from a US line. Philippine/non-US numbers may not be testable from local SIM — use Web Call instead.
 
 ---
 
@@ -35,15 +36,17 @@
 3. Confirm the booking when the agent reads it back
 
 **Post-Test Validation:**
-- [ ] Agent collected all 7 fields without skipping any
+- [ ] Agent collected all required fields without skipping any (name, phone, email, address, service type)
 - [ ] Agent used the caller-provided name (not the sub-account admin name or a default)
-  > ⚠️ If the contact record shows the sub-account admin name instead of "John Tester," the system prompt is missing the explicit name collection instruction. Fix: ensure the prompt says to collect full name as the FIRST data point.
-- [ ] Appointment appears in the GHL calendar at the correct date and time
-- [ ] Appointment timezone matches what the caller requested (verify in calendar view)
-- [ ] SMS confirmation received at the test phone number
+  > ⚠️ **Confirmed real-world bug:** GHL defaults the contact name to the sub-account admin's name if the agent doesn't explicitly ask for it. In the tutorial, the contact was created as "JHL Pinas Admin" because the prompt didn't instruct name collection. Fix: the system prompt must say "Your first task is to collect the caller's full first and last name" — the generator already includes this.
+- [ ] Appointment appears in the GHL calendar
+- [ ] Appointment time in calendar is correct — check for timezone offset errors
+  > ⚠️ **Confirmed real-world bug:** In the tutorial, a 6 PM booking appeared as 8 AM in the calendar due to a CST timezone mismatch. If the time looks wrong, check that agent timezone, team member timezone, and sub-account timezone all match. Fix in: Agent Details timezone + `Settings > Staff > [Member] > Timezone`.
+- [ ] Check `Automations > [Workflow] > Execution Logs` — confirm the workflow fired and all actions completed
+- [ ] SMS confirmation received at the test phone number (only if A2P approved)
 - [ ] Email notification received at the technician email
-- [ ] Contact tagged `Booked by AI` in GHL Contacts
-- [ ] Appointment duration matches the configured duration (e.g., 60 minutes)
+- [ ] Contact tagged `Book by AI` in GHL Contacts (verify under contact record > Tags)
+- [ ] Appointment duration matches the configured duration
 
 ---
 
@@ -130,10 +133,12 @@ After all 5 scenarios pass:
 
 | Symptom | Root Cause | Fix |
 |---|---|---|
-| Contact name shows sub-account admin name | System prompt missing explicit name collection instruction | Add to prompt: "Your first task is to collect the caller's full first and last name." |
-| Agent books wrong time (timezone offset) | Agent/calendar/sub-account timezones don't match | Align all three in Phase 1 and Phase 4 settings |
-| SMS not delivered after booking | A2P 10DLC not approved for sending number | Complete A2P registration; disable SMS action until approved |
-| Agent doesn't know FAQ answers | KB saved too recently (propagation delay) | Wait 2 minutes and re-test |
-| Transfer doesn't fire | Transfer action not added or number is empty | Add/fix transfer action in Phase 3A |
-| Workflow doesn't trigger | Workflow in Draft status or wrong trigger agent ID | Set workflow to Active; check agent ID filter |
-| Agent accepts out-of-area caller | ZIP list missing or system prompt eligibility check too vague | Verify ZIP list in prompt and KB; make eligibility check an explicit conditional |
+| Contact name shows sub-account admin name | System prompt missing explicit name collection — GHL defaults to admin name | Prompt must say "Your first task is to collect the caller's full first and last name." Generator already includes this. |
+| Agent books wrong time (timezone offset) | Agent timezone, team member profile timezone, or sub-account timezone are mismatched | Align: Agent Details timezone + `Settings > Staff > [Member] > Timezone` + `Settings > Business Profile > Timezone` |
+| SMS not delivered after booking | A2P 10DLC not approved for sending number — fails silently | Complete A2P registration; disable SMS action until approved. Check status at `Settings > Phone System > [Number] > Compliance` |
+| Agent doesn't know FAQ answers | KB saved too recently (propagation delay) | Wait 1–2 minutes after saving KB before testing |
+| Transfer doesn't fire | Transfer action not added or number is empty | Add/fix transfer action in Agent Goals > During the Call > Call Transfer |
+| Workflow doesn't trigger | Workflow in Draft status (not published) | Set workflow to Active/Published in Automations |
+| Workflow trigger fires but no SMS | Trigger is "Appointment Status = New" but a wrong filter or missing phone field | Check execution logs in Automations; verify contact has a phone number |
+| Agent accepts out-of-area caller | ZIP list missing or system prompt eligibility check too vague | Add explicit ZIP screening to system prompt; list all covered ZIPs in KB |
+| Workflow fires but contact name is wrong | Contact was created before name was collected | Fix prompt to collect name first; delete test contact and re-test clean |

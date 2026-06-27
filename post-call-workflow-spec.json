@@ -1,16 +1,18 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "description": "GHL post-call automation workflow specification. Use this as a reference when building the workflow in GHL > Automations. All template variables use GHL's native custom value syntax.",
-  "workflow_name": "AI Voice - Post Booking Automation",
+  "workflow_name": "Appointment Book by AI",
+  "ghl_workflow_linking": "After building and publishing this workflow, link it in GHL at: AI Agents > Voice AI > Inbound > [Agent] > Agent Goals > After the Call > Trigger Workflow when call is completed > select this workflow",
   "status": "active",
   "trigger": {
-    "type": "Appointment Booked by AI Agent",
+    "type": "Appointment Status",
+    "ghl_trigger_name": "Appointment Status",
     "filters": [
       {
-        "field": "agent_id",
+        "field": "appointment_status",
         "operator": "equals",
-        "value": "{{AGENT_ID_FROM_PHASE_1}}",
-        "note": "Scope this trigger to your specific agent to avoid firing on manual or other-source bookings"
+        "value": "New",
+        "note": "Fires when a net-new appointment is created — this covers AI agent bookings. 'Appointment Booked by AI Agent' is not a standalone trigger in GHL Automations as of this writing; use 'Appointment Status = New' instead."
       }
     ]
   },
@@ -40,7 +42,7 @@
       "sequence": 3,
       "type": "Tag",
       "action": "add",
-      "tag": "Booked by AI",
+      "tag": "Book by AI",
       "notes": "Enables filtering AI-sourced contacts in GHL Contacts view and Smart Lists for reporting."
     },
     {
