@@ -47,7 +47,7 @@ const artifacts = (slug) => ({
   intake:        intakePath(slug),
   systemPrompt:  path.join(clientDir(slug), 'system-prompt-output.txt'),
   knowledgeBase: path.join(clientDir(slug), 'knowledge-base-content.md'),
-  workflowSpec:  path.join(clientDir(slug), 'post-call-workflow-spec.json'),
+  setupGuide:    path.join(clientDir(slug), 'fast-setup-guide.md'),
 });
 
 // ── Validation ────────────────────────────────────────────────────────────────
@@ -123,7 +123,7 @@ function cmdGenerate(slug) {
 
   const { generateSystemPrompt } = require('./lib/generate-system-prompt');
   const { generateKnowledgeBase } = require('./lib/generate-knowledge-base');
-  const { generateWorkflowSpec }  = require('./lib/generate-workflow-spec');
+  const { generateFastSetupGuide } = require('./lib/generate-fast-setup-guide');
 
   const paths = artifacts(slug);
   const results = [];
@@ -147,13 +147,13 @@ function cmdGenerate(slug) {
     results.push({ label: 'Knowledge Base', path: paths.knowledgeBase, ok: false, note: e.message });
   }
 
-  // 3 — Workflow spec
+  // 3 — Fast setup guide
   try {
-    const spec = generateWorkflowSpec(b);
-    write(paths.workflowSpec, spec);
-    results.push({ label: 'Workflow Spec', path: paths.workflowSpec, ok: true });
+    const guide = generateFastSetupGuide(b);
+    write(paths.setupGuide, guide);
+    results.push({ label: 'Fast Setup Guide', path: paths.setupGuide, ok: true });
   } catch (e) {
-    results.push({ label: 'Workflow Spec', path: paths.workflowSpec, ok: false, note: e.message });
+    results.push({ label: 'Fast Setup Guide', path: paths.setupGuide, ok: false, note: e.message });
   }
 
   // ── Summary ────────────────────────────────────────────────────────────────
@@ -176,8 +176,8 @@ function cmdGenerate(slug) {
   console.log(c.bold('Next steps:'));
   console.log(`  1. Copy ${c.dim(`clients/${slug}/system-prompt-output.txt`)} → GHL Agent Goals > Advanced Mode > System Prompt`);
   console.log(`  2. Copy ${c.dim(`clients/${slug}/knowledge-base-content.md`)} → GHL Agent Goals > Knowledge Base (wait 1–2 min after saving)`);
-  console.log(`  3. Reference ${c.dim(`clients/${slug}/post-call-workflow-spec.json`)} when building the Automations workflow`);
-  console.log(`  4. Follow ${c.dim('ghl-setup-checklist.md')} for the remaining phases`);
+  console.log(`  3. Open ${c.dim(`clients/${slug}/fast-setup-guide.md`)} and follow it step by step to set up calendar, workflow, and pipeline`);
+  console.log(`  4. Use ${c.dim('ghl-setup-checklist.md')} as the master checklist across all 7 phases`);
   console.log('');
   if (b.phone_number_country === 'PH') {
     console.log(c.yellow('⚠ phone_number_country is PH — remind client that PH numbers cost $15–$120+/month vs ~$0.15 for US numbers.'));
@@ -218,7 +218,7 @@ function cmdList() {
       `${check(paths.intake).padEnd(8 + 9)}` +
       `${check(paths.systemPrompt).padEnd(8 + 9)}` +
       `${check(paths.knowledgeBase).padEnd(8 + 9)}` +
-      `${check(paths.workflowSpec)}`
+      `${check(paths.setupGuide)}`
     );
   });
   console.log('');

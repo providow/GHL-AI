@@ -13,7 +13,7 @@ const path = require('path');
 
 const { generateSystemPrompt } = require('./lib/generate-system-prompt');
 const { generateKnowledgeBase } = require('./lib/generate-knowledge-base');
-const { generateWorkflowSpec }  = require('./lib/generate-workflow-spec');
+const { generateFastSetupGuide } = require('./lib/generate-fast-setup-guide');
 
 const PORT       = 3000;
 const ROOT       = __dirname;
@@ -31,7 +31,7 @@ const intakePath = (slug) => path.join(clientDir(slug), 'intake-form.json');
 const artifacts  = (slug) => ({
   systemPrompt:  path.join(clientDir(slug), 'system-prompt-output.txt'),
   knowledgeBase: path.join(clientDir(slug), 'knowledge-base-content.md'),
-  workflowSpec:  path.join(clientDir(slug), 'post-call-workflow-spec.json'),
+  setupGuide:    path.join(clientDir(slug), 'fast-setup-guide.md'),
 });
 
 const json = (res, data, status = 200) => {
@@ -53,7 +53,7 @@ const listClients = () => {
         has_intake:    fs.existsSync(ip),
         has_prompt:    fs.existsSync(a.systemPrompt),
         has_kb:        fs.existsSync(a.knowledgeBase),
-        has_workflow:  fs.existsSync(a.workflowSpec),
+        has_workflow:  fs.existsSync(a.setupGuide),
       };
     });
 };
@@ -95,7 +95,7 @@ const server = http.createServer((req, res) => {
   if (method === 'GET' && url.pathname.startsWith('/api/artifact/')) {
     const [, , , slug, type] = url.pathname.split('/');
     const a = artifacts(slug);
-    const filePath = { prompt: a.systemPrompt, kb: a.knowledgeBase, workflow: a.workflowSpec }[type];
+    const filePath = { prompt: a.systemPrompt, kb: a.knowledgeBase, workflow: a.setupGuide }[type];
     if (!filePath || !fs.existsSync(filePath)) { json(res, { error: 'Not found' }, 404); return; }
     const content = fs.readFileSync(filePath, 'utf8');
     json(res, { content });
@@ -132,8 +132,8 @@ const server = http.createServer((req, res) => {
         } catch (e) { errors.kb = e.message; }
 
         try {
-          const spec = generateWorkflowSpec(intake);
-          writeFile(artifacts(slug).workflowSpec, spec);
+          const guide = generateFastSetupGuide(intake);
+          writeFile(artifacts(slug).setupGuide, guide);
           results.workflow = true;
         } catch (e) { errors.workflow = e.message; }
 
@@ -562,7 +562,7 @@ function renderResults(slug, data) {
   const items = [
     { key: 'prompt',   label: 'System Prompt',  type: 'prompt',   note: data.results?.prompt ? \`\${data.results.prompt.wordCount} words\` : '' },
     { key: 'kb',       label: 'Knowledge Base',  type: 'kb' },
-    { key: 'workflow', label: 'Workflow Spec',   type: 'workflow' },
+    { key: 'workflow', label: 'Fast Setup Guide', type: 'workflow' },
   ];
 
   document.getElementById('results-area').innerHTML = \`
